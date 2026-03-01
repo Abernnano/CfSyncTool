@@ -13,12 +13,20 @@ RESET = "\033[0m"
 def run_command(cmd):
     """运行命令并返回结果"""
     try:
-        result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
+        result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True, encoding="utf-8")
         return result.stdout
     except subprocess.CalledProcessError as e:
         print(f"{YELLOW}命令执行失败: {e}{RESET}")
         print(f"{YELLOW}错误输出: {e.stderr}{RESET}")
         return None
+    except UnicodeDecodeError:
+        # 尝试使用 GBK 编码
+        try:
+            result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True, encoding="gbk")
+            return result.stdout
+        except Exception as e:
+            print(f"{YELLOW}命令执行失败: {e}{RESET}")
+            return None
 
 def check_git_installed():
     """检查 Git 是否安装"""
@@ -160,8 +168,19 @@ def push_to_github():
     if result is None:
         return False
     
+    print(f"{YELLOW}注意: GitHub 不再支持密码认证，需要使用个人访问令牌 (PAT){RESET}")
+    print(f"{YELLOW}请按照以下步骤操作: {RESET}")
+    print(f"{YELLOW}1. 登录 GitHub 账号{RESET}")
+    print(f"{YELLOW}2. 进入 Settings > Developer settings > Personal access tokens{RESET}")
+    print(f"{YELLOW}3. 创建一个新的令牌，选择 'repo' 权限{RESET}")
+    print(f"{YELLOW}4. 复制生成的令牌{RESET}")
+    print(f"{YELLOW}5. 当 Git 提示输入密码时，粘贴令牌作为密码{RESET}")
+    
+    # 尝试推送
     result = run_command("git push -u origin main")
     if result is None:
+        print(f"{YELLOW}推送失败，请手动执行以下命令: {RESET}")
+        print(f"{YELLOW}git push -u origin main{RESET}")
         return False
     print(f"{GREEN}代码推送成功{RESET}")
     return True
