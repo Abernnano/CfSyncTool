@@ -1,53 +1,53 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 import os
 import subprocess
 import sys
 
 # 颜色设置
-class Colors:
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    CYAN = '\033[96m'
-    RESET = '\033[0m'
-
-def print_green(text):
-    print(f"{Colors.GREEN}{text}{Colors.RESET}")
-
-def print_yellow(text):
-    print(f"{Colors.YELLOW}{text}{Colors.RESET}")
-
-def print_cyan(text):
-    print(f"{Colors.CYAN}{text}{Colors.RESET}")
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+CYAN = "\033[36m"
+RESET = "\033[0m"
 
 def run_command(cmd):
     """运行命令并返回结果"""
     try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-        return result.returncode, result.stdout, result.stderr
-    except Exception as e:
-        return 1, "", str(e)
+        result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        print(f"{YELLOW}命令执行失败: {e}{RESET}")
+        print(f"{YELLOW}错误输出: {e.stderr}{RESET}")
+        return None
 
-def check_git():
+def check_git_installed():
     """检查 Git 是否安装"""
-    code, _, _ = run_command("git --version")
-    return code == 0
+    result = run_command("git --version")
+    if result:
+        print(f"{GREEN}Git 已安装: {result.strip()}{RESET}")
+        return True
+    else:
+        print(f"{YELLOW}错误: Git 未安装，请先安装 Git{RESET}")
+        return False
 
 def init_git_repo():
     """初始化 Git 仓库"""
     if not os.path.exists(".git"):
-        print_yellow("初始化 Git 仓库...")
-        code, _, stderr = run_command("git init")
-        if code != 0:
-            print_yellow(f"初始化 Git 仓库失败: {stderr}")
+        print(f"{YELLOW}初始化 Git 仓库...{RESET}")
+        result = run_command("git init")
+        if result:
+            print(f"{GREEN}Git 仓库初始化成功{RESET}")
+        else:
+            print(f"{YELLOW}Git 仓库初始化失败{RESET}")
             return False
+    else:
+        print(f"{GREEN}Git 仓库已存在{RESET}")
     return True
 
 def create_gitignore():
     """创建 .gitignore 文件"""
     if not os.path.exists(".gitignore"):
-        print_yellow("创建 .gitignore 文件...")
+        print(f"{YELLOW}创建 .gitignore 文件...{RESET}")
         gitignore_content = """# 虚拟环境
 .venv/
 
@@ -71,11 +71,14 @@ config_*.json
 """
         with open(".gitignore", "w", encoding="utf-8") as f:
             f.write(gitignore_content)
+        print(f"{GREEN}.gitignore 文件创建成功{RESET}")
+    else:
+        print(f"{GREEN}.gitignore 文件已存在{RESET}")
 
 def create_readme():
     """创建 README.md 文件"""
     if not os.path.exists("README.md"):
-        print_yellow("创建 README.md 文件...")
+        print(f"{YELLOW}创建 README.md 文件...{RESET}")
         readme_content = """# CloudflareSyncTool
 
 Cloudflare IP同步工具，用于优化网络连接
@@ -113,71 +116,87 @@ MIT
 """
         with open("README.md", "w", encoding="utf-8") as f:
             f.write(readme_content)
+        print(f"{GREEN}README.md 文件创建成功{RESET}")
+    else:
+        print(f"{GREEN}README.md 文件已存在{RESET}")
 
 def add_and_commit():
-    """添加文件到暂存区并提交"""
-    print_cyan("添加文件到暂存区...")
-    code, _, stderr = run_command("git add .")
-    if code != 0:
-        print_yellow(f"添加文件失败: {stderr}")
+    """添加文件并提交"""
+    print(f"{CYAN}添加文件到暂存区...{RESET}")
+    result = run_command("git add .")
+    if result is None:
         return False
+    
+    print(f"{CYAN}提交更改...{RESET}")
+    result = run_command('git commit -m "初始化项目"')
+    if result is None:
+        print(f"{YELLOW}提交失败，可能没有更改{RESET}")
+    else:
+        print(f"{GREEN}提交成功{RESET}")
+    return True
 
-    print_cyan("提交更改...")
-    code, _, stderr = run_command('git commit -m "初始化项目"')
-    if code != 0:
-        print_yellow(f"提交失败，可能没有更改: {stderr}")
+def setup_remote_repo():
+    """设置远程仓库"""
+    repo_url = "https://github.com/Abernnano/CfSyncTool.git"
+    print(f"{CYAN}添加远程仓库: {repo_url}{RESET}")
+    
+    # 检查是否已存在远程仓库
+    result = run_command("git remote -v")
+    if "origin" in result:
+        print(f"{YELLOW}远程仓库已存在，更新远程仓库 URL...{RESET}")
+        result = run_command(f"git remote set-url origin {repo_url}")
+    else:
+        result = run_command(f"git remote add origin {repo_url}")
+    
+    if result is None:
+        return False
+    print(f"{GREEN}远程仓库设置成功{RESET}")
     return True
 
 def push_to_github():
     """推送代码到 GitHub"""
-    print_yellow("请在 GitHub 上创建一个新的开源仓库，然后输入仓库 URL:")
-    repo_url = input("GitHub 仓库 URL: ").strip()
+    print(f"{CYAN}推送代码到 GitHub...{RESET}")
+    result = run_command("git branch -M main")
+    if result is None:
+        return False
     
-    if not repo_url:
-        print_yellow("仓库 URL 不能为空")
+    result = run_command("git push -u origin main")
+    if result is None:
         return False
-
-    print_cyan("添加远程仓库...")
-    code, _, stderr = run_command(f"git remote add origin {repo_url}")
-    if code != 0:
-        print_yellow(f"添加远程仓库失败: {stderr}")
-        return False
-
-    print_cyan("推送代码到 GitHub...")
-    code, _, stderr = run_command("git push -u origin master")
-    if code != 0:
-        print_yellow(f"推送失败，请检查网络连接和仓库权限: {stderr}")
-        return False
-
-    print_green(f"同步完成！项目已成功上传到 GitHub")
-    print_green(f"仓库地址: {repo_url}")
+    print(f"{GREEN}代码推送成功{RESET}")
     return True
 
 def main():
     """主函数"""
-    print_green("=== CloudflareSyncTool Git 同步脚本 ===")
-    print_cyan("开始执行脚本...")
-
+    print(f"{GREEN}=== CloudflareSyncTool Git 同步脚本 ==={RESET}")
+    print(f"{CYAN}开始执行脚本...{RESET}")
+    
     # 检查 Git 是否安装
-    if not check_git():
-        print_yellow("错误: Git 未安装，请先安装 Git")
+    if not check_git_installed():
         sys.exit(1)
-
+    
     # 初始化 Git 仓库
     if not init_git_repo():
         sys.exit(1)
-
+    
     # 创建必要的文件
     create_gitignore()
     create_readme()
-
-    # 添加并提交更改
+    
+    # 添加并提交文件
     if not add_and_commit():
         sys.exit(1)
-
+    
+    # 设置远程仓库
+    if not setup_remote_repo():
+        sys.exit(1)
+    
     # 推送代码到 GitHub
     if not push_to_github():
         sys.exit(1)
+    
+    print(f"{GREEN}同步完成！项目已成功上传到 GitHub{RESET}")
+    print(f"{GREEN}仓库地址: https://github.com/Abernnano/CfSyncTool.git{RESET}")
 
 if __name__ == "__main__":
     main()
