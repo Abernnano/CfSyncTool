@@ -14,7 +14,7 @@ CYAN = "\033[36m"
 RESET = "\033[0m"
 
 # 远程仓库地址
-REMOTE_URL = "git@github.com:Abernnano/CfSyncTool.git"
+REMOTE_URL = "https://github.com/Abernnano/CfSyncTool.git"
 
 def run_command(cmd):
     """执行命令并返回结果"""
@@ -190,8 +190,13 @@ def push_to_github():
     if result is None:
         return False
     
-    print(f"{YELLOW}注意: 使用SSH地址需要配置SSH密钥{RESET}")
-    print(f"{YELLOW}如果还没有配置SSH密钥，请参考GitHub官方文档{RESET}")
+    print(f"{YELLOW}注意: GitHub 不再支持密码认证，需要使用个人访问令牌 (PAT){RESET}")
+    print(f"{YELLOW}请按照以下步骤操作: {RESET}")
+    print(f"{YELLOW}1. 登录 GitHub 账号{RESET}")
+    print(f"{YELLOW}2. 进入 Settings > Developer settings > Personal access tokens{RESET}")
+    print(f"{YELLOW}3. 创建一个新的令牌，选择 'repo' 权限{RESET}")
+    print(f"{YELLOW}4. 复制生成的令牌{RESET}")
+    print(f"{YELLOW}5. 当 Git 提示输入密码时，粘贴令牌作为密码{RESET}")
     
     # 尝试推送
     result = run_command("git push -u origin main")
